@@ -1,134 +1,152 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+/**
+ * Mythic GME Plugin for Obsidian
+ * Main plugin class
+ */
 
-// Remember to rename these classes and interfaces!
+import { Plugin } from 'obsidian';
+import { MythicGMESettings, DEFAULT_SETTINGS } from './src/settings';
+import { OracleView, VIEW_TYPE_ORACLE } from './src/oracleView';
+import { HistoryView, VIEW_TYPE_HISTORY } from './src/historyView';
+import { MythicGMESettingTab } from './src/settingsTab';
 
-interface MyPluginSettings {
-	mySetting: string;
-}
+export default class MythicGMEPlugin extends Plugin {
+  settings: MythicGMESettings;
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
+  async onload() {
+    await this.loadSettings();
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+    // Register the oracle view
+    this.registerView(
+      VIEW_TYPE_ORACLE,
+      (leaf) => new OracleView(leaf, this)
+    );
 
-	async onload() {
-		await this.loadSettings();
+    // Register the history view
+    this.registerView(
+      VIEW_TYPE_HISTORY,
+      (leaf) => new HistoryView(leaf, this)
+    );
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+    // Register command to open oracle view
+    this.addCommand({
+      id: 'open-mythic-gme-oracles',
+      name: 'Open Mythic GME Oracles',
+      callback: () => {
+        this.activateOracleView();
+      }
+    });
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+    // Register command to open history view
+    this.addCommand({
+      id: 'open-mythic-gme-history',
+      name: 'Open Roll History',
+      callback: () => {
+        this.activateHistoryView();
+      }
+    });
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, _view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+    // Add ribbon icon for quick access to oracles
+    this.addRibbonIcon('telescope', 'Open Mythic GME Oracles', (_evt: MouseEvent) => {
+      this.activateOracleView();
+    });
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
+    // Register settings tab
+    this.addSettingTab(new MythicGMESettingTab(this.app, this));
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+    // Automatically open both views on startup
+    this.app.workspace.onLayoutReady(() => {
+      this.activateOracleView();
+      this.activateHistoryView();
+    });
+  }
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
+  async activateOracleView() {
+    const { workspace } = this.app;
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
+    let leaf = workspace.getLeavesOfType(VIEW_TYPE_ORACLE)[0];
 
-	onunload() {
+    if (!leaf) {
+      // Create new leaf in right sidebar
+      const rightLeaf = workspace.getRightLeaf(false);
+      if (rightLeaf) {
+        await rightLeaf.setViewState({
+          type: VIEW_TYPE_ORACLE,
+          active: true
+        });
+        leaf = rightLeaf;
+      }
+    }
 
-	}
+    // Reveal the leaf
+    if (leaf) {
+      workspace.revealLeaf(leaf);
+    }
+  }
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
+  async activateHistoryView() {
+    const { workspace } = this.app;
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
+    let leaf = workspace.getLeavesOfType(VIEW_TYPE_HISTORY)[0];
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+    if (!leaf) {
+      // Create new leaf in right sidebar
+      const rightLeaf = workspace.getRightLeaf(false);
+      if (rightLeaf) {
+        await rightLeaf.setViewState({
+          type: VIEW_TYPE_HISTORY,
+          active: true
+        });
+        leaf = rightLeaf;
+      }
+    }
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
+    // Reveal the leaf
+    if (leaf) {
+      workspace.revealLeaf(leaf);
+    }
+  }
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
+  /**
+   * Refresh the history view when new rolls are added
+   */
+  refreshHistoryView() {
+    const { workspace } = this.app;
+    const leaves = workspace.getLeavesOfType(VIEW_TYPE_HISTORY);
+    
+    leaves.forEach(leaf => {
+      const view = leaf.view;
+      if (view instanceof HistoryView) {
+        view.refresh();
+      }
+    });
+  }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+  /**
+   * Refresh the oracle view when settings change
+   */
+  refreshOracleView() {
+    const { workspace } = this.app;
+    const leaves = workspace.getLeavesOfType(VIEW_TYPE_ORACLE);
+    
+    leaves.forEach(leaf => {
+      const view = leaf.view;
+      if (view instanceof OracleView) {
+        view.refresh();
+      }
+    });
+  }
 
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
+  onunload() {
+    // Cleanup: detach all views
+    this.app.workspace.detachLeavesOfType(VIEW_TYPE_ORACLE);
+    this.app.workspace.detachLeavesOfType(VIEW_TYPE_HISTORY);
+  }
 
-	display(): void {
-		const {containerEl} = this;
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
 
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
 }

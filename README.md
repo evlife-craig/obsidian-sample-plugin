@@ -1,94 +1,192 @@
-# Obsidian Sample Plugin
+# Mythic GME Oracles
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+A comprehensive Obsidian plugin that brings Mythic GME (Game Master Emulator) v2 oracles directly into your vault. Perfect for solo RPG players who want quick access to oracle tables without leaving their note-taking workflow.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+-   **Sidebar Oracle Panel**: Access all oracle tables from a dedicated sidebar view
+-   **Core Mythic GME v2 Tables**: Includes Fate Chart, Event Meaning (Action/Description), and Descriptor tables
+-   **Fate Chart with Context**: Set Chaos Factor (1-9) and Odds for contextually appropriate yes/no answers
+-   **Combined Rolls**: Roll Event Meaning (Action + Description) with a single click
+-   **Roll History**: View recent rolls with timestamps and context
+-   **One-Click Insert**: Insert roll results directly into your active note at cursor position
+-   **Auto-Copy to Clipboard**: Results automatically copied for quick pasting anywhere
+-   **Search & Filter**: Quickly find specific oracle tables
+-   **Collapsible Sections**: Organize tables by category with persistent expand/collapse state
+-   **Extensible**: Easy to add custom oracle tables from Mythic Magazine
 
-## First time developing plugins?
+## Usage
 
-Quick starting guide for new plugin devs:
+### Opening the Oracle Panel
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+1. Click the dice icon (🎲) in the left ribbon, or
+2. Use the command palette (Ctrl/Cmd + P) and search for "Open Mythic GME Oracles"
 
-## Releasing new releases
+### Rolling on Oracle Tables
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+1. Browse or search for the oracle table you want to use
+2. Click the roll button (🎲) next to the table name
+3. The result appears in the roll history at the bottom of the sidebar
+4. Results are automatically copied to your clipboard
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+### Using the Fate Chart
 
-## Adding your plugin to the community plugin list
+1. Expand the "Core Mythic GME v2" section
+2. Find the Fate Chart table
+3. Set your Chaos Factor (1-9) and select the Odds level
+4. Click the roll button
+5. The result shows Yes/No/Exceptional with the context used
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+### Rolling Event Meaning
 
-## How to use
+1. Find the Event Meaning section
+2. Click "Roll Event Meaning" to roll both Action and Description tables together
+3. Get combined results like "Oppose - Technology" or "Create - Hope"
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### Inserting Results into Notes
 
-## Manually installing the plugin
+1. After rolling, find the result in the roll history
+2. Click the insert button (📄) next to the result
+3. The formatted result is inserted at your cursor position in the active note
+4. If no note is open, you'll see a notification
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+### Managing Roll History
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint ./src/`
+-   View up to 20 recent rolls with timestamps
+-   Click "Clear" to remove all history
+-   Each result shows the table name, outcome, and any relevant context
 
-## Funding URL
+## Installation
 
-You can include funding URLs where people who use your plugin can financially support it.
+### From Obsidian Community Plugins (Coming Soon)
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+1. Open Settings → Community Plugins
+2. Search for "Mythic GME Oracles"
+3. Click Install, then Enable
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+### Manual Installation
+
+1. Download the latest release from the [Releases page](https://github.com/yourusername/obsidian-mythic-gme/releases)
+2. Extract the files to your vault's plugins folder: `VaultFolder/.obsidian/plugins/mythic-gme-plugin/`
+3. Reload Obsidian
+4. Enable the plugin in Settings → Community Plugins
+
+### Building from Source
+
+To build the plugin for use in your own vaults:
+
+1. Clone this repository
+2. Run `npm install` to install dependencies
+3. Run `npm run build` to create a production build
+4. Copy these three files to your vault's plugin folder:
+    - `main.js`
+    - `manifest.json`
+    - `styles.css`
+5. The destination should be: `YourVault/.obsidian/plugins/mythic-gme-plugin/`
+6. Reload Obsidian and enable the plugin in Settings → Community Plugins
+
+**Quick Copy Command (after building):**
+
+```bash
+# Replace /path/to/your/vault with your actual vault path
+cp main.js manifest.json styles.css /path/to/your/vault/.obsidian/plugins/mythic-gme-plugin/
 ```
 
-If you have multiple URLs, you can also do:
+## Development
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+### Setup
+
+1. Clone this repository
+2. Run `npm install` to install dependencies
+3. Run `npm run setup-dev` to create a development vault with hot-reload
+4. Run `npm run dev` to start compilation in watch mode
+5. Open the `dev-vault` folder in Obsidian
+6. Enable the plugin in Settings → Community Plugins
+
+### Development Workflow
+
+1. Make changes to TypeScript files in `src/`
+2. The plugin automatically recompiles (watch mode)
+3. Reload Obsidian (Ctrl/Cmd + R) to see changes
+4. Test using the `Test Note.md` in the dev vault
+
+### Project Structure
+
+```
+src/
+  ├── oracleEngine.ts      # Core rolling logic and table registry
+  ├── oracleView.ts        # Sidebar UI component
+  ├── historyView.ts       # Roll history display
+  ├── settings.ts          # Plugin settings interface
+  ├── settingsTab.ts       # Settings UI
+  ├── types.ts             # TypeScript interfaces and enums
+  └── tables/
+      ├── core/            # Mythic GME v2 core tables
+      │   ├── fateChart.ts
+      │   ├── eventMeaning.ts
+      │   └── descriptors.ts
+      ├── magazine/        # Mythic Magazine tables
+      └── index.ts         # Table registry
 ```
 
-## API Documentation
+### Build Commands
 
-See https://github.com/obsidianmd/obsidian-api
+-   `npm run dev` - Start development build with watch mode
+-   `npm run build` - Create production build
+-   `npm run setup-dev` - Initialize development vault
+-   `npm version patch/minor/major` - Bump version and update manifest
+
+### Adding Custom Oracle Tables
+
+Create a new table file in `src/tables/`:
+
+```typescript
+import { OracleTable, DiceType, OracleType } from "../types";
+
+export const myCustomTable: OracleTable = {
+	id: "my-custom-table",
+	name: "My Custom Oracle",
+	category: "Custom Category",
+	type: OracleType.STANDARD,
+	diceType: DiceType.D100,
+	entries: [
+		{ range: [1, 10], result: "First Result" },
+		{ range: [11, 20], result: "Second Result" },
+		// ... more entries
+	],
+	description: "Optional description",
+};
+```
+
+Then export it from `src/tables/index.ts` to make it available in the UI.
+
+## Requirements
+
+-   Obsidian v0.15.0 or higher
+-   Works on desktop and mobile
+
+## Support
+
+If you encounter issues or have feature requests, please [open an issue](https://github.com/yourusername/obsidian-mythic-gme/issues) on GitHub.
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Credits
+
+Based on the Mythic Game Master Emulator v2 by Tana Pigeon.
+
+Oracle tables and mechanics are from the Mythic GME system. This plugin is an unofficial tool for use with Mythic GME and is not affiliated with Word Mill Publishing.
+
+## Changelog
+
+### 1.0.0 (Initial Release)
+
+-   Core Mythic GME v2 oracle tables
+-   Fate Chart with Chaos Factor and Odds
+-   Event Meaning combined rolls
+-   Roll history with insert and copy functionality
+-   Search and filter capabilities
+-   Collapsible table sections
+-   Auto-copy to clipboard

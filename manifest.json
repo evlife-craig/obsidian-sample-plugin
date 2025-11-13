@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "mythic-gme-plugin",
+	"name": "Mythic GME Oracles",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "A comprehensive Mythic GME v2 oracle plugin for solo RPG play. Roll on Fate Charts, Event Meaning tables, and descriptors directly from the sidebar. Insert results into your notes with one click.",
+	"author": "",
+	"authorUrl": "",
+	"fundingUrl": "",
 	"isDesktopOnly": false
 }

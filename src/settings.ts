@@ -2,7 +2,7 @@
  * Plugin settings and defaults
  */
 
-import { FateChartOdds, OracleType, RollResult } from './types';
+import { FateChartOdds, OracleType, RollResult, ValidationError } from './types';
 
 /**
  * Plugin settings interface
@@ -29,6 +29,12 @@ export interface MythicGMESettings {
   
   // Filters
   activeTypeFilters: OracleType[];
+  
+  // Custom tables
+  customTablesFolder: string;
+  showCustomTables: boolean;
+  showBuiltInTables: boolean;
+  validationErrors: ValidationError[];
 }
 
 /**
@@ -44,5 +50,9 @@ export const DEFAULT_SETTINGS: MythicGMESettings = {
   autoInsertToNote: false,
   popupDuration: 5000, // 5 seconds
   showCategoryTags: true,
-  activeTypeFilters: [] // Empty = show all types
+  activeTypeFilters: [], // Empty = show all types
+  customTablesFolder: 'mythic-gme-tables',
+  showCustomTables: true,
+  showBuiltInTables: true,
+  validationErrors: []
 };

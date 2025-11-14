@@ -4,6 +4,7 @@
 
 import {
   OracleTable,
+  CustomOracleTable,
   TableCategory,
   OracleType,
   DiceType,
@@ -13,66 +14,149 @@ import {
 } from './types';
 
 export class OracleEngine {
-  private tableRegistry: Map<string, OracleTable>;
+  private builtInTables: Map<string, OracleTable>;
+  private customTables: Map<string, CustomOracleTable>;
   private categories: TableCategory[];
 
   constructor(tables: OracleTable[]) {
-    // Initialize table registry
-    this.tableRegistry = new Map();
+    // Initialize built-in table registry
+    this.builtInTables = new Map();
     tables.forEach(table => {
-      this.tableRegistry.set(table.id, table);
+      this.builtInTables.set(table.id, table);
     });
+
+    // Initialize custom tables registry
+    this.customTables = new Map();
 
     // Organize tables into categories
-    this.categories = this.organizeTables(tables);
+    this.rebuildCategories();
   }
 
   /**
-   * Organize tables into categories
+   * Add a custom table to the engine
    */
-  private organizeTables(tables: OracleTable[]): TableCategory[] {
-    const categoryMap = new Map<string, TableCategory>();
+  addCustomTable(table: CustomOracleTable): void {
+    this.customTables.set(table.id, table);
+    this.rebuildCategories();
+  }
 
-    // Separate core and magazine tables
-    const coreTables = tables.filter(t => !t.magazineVolume);
-    const magazineTables = tables.filter(t => t.magazineVolume);
+  /**
+   * Remove a custom table by ID
+   */
+  removeCustomTable(tableId: string): void {
+    this.customTables.delete(tableId);
+    this.rebuildCategories();
+  }
 
-    // Organize core tables by their category
-    coreTables.forEach(table => {
-      if (!categoryMap.has(table.category)) {
-        categoryMap.set(table.category, {
-          id: table.category.toLowerCase().replace(/\s+/g, '-'),
-          name: table.category,
+  /**
+   * Clear all custom tables
+   */
+  clearCustomTables(): void {
+    this.customTables.clear();
+    this.rebuildCategories();
+  }
+
+  /**
+   * Get all tables (built-in and custom combined)
+   */
+  getAllTables(): OracleTable[] {
+    return [
+      ...Array.from(this.builtInTables.values()),
+      ...Array.from(this.customTables.values())
+    ];
+  }
+
+  /**
+   * Rebuild categories from all tables (built-in and custom)
+   * Supports nested categories using "/" separator
+   */
+  private rebuildCategories(): void {
+    const allTables = this.getAllTables();
+    
+    // Separate core, magazine, and custom tables
+    const coreTables = allTables.filter(t => !t.magazineVolume && !('source' in t && (t as CustomOracleTable).source === 'custom'));
+    const magazineTables = allTables.filter(t => t.magazineVolume && !('source' in t && (t as CustomOracleTable).source === 'custom'));
+    const customTables = allTables.filter(t => 'source' in t && (t as CustomOracleTable).source === 'custom');
+
+    // Build nested category structure
+    const rootCategories: TableCategory[] = [];
+    
+    // Helper function to find or create a category in the tree
+    const findOrCreateCategory = (
+      categoryPath: string[], 
+      tables: OracleTable[], 
+      source: 'core' | 'magazine',
+      parentCategories: TableCategory[]
+    ): TableCategory => {
+      const currentName = categoryPath[0];
+      const categoryId = categoryPath.join('-').toLowerCase().replace(/\s+/g, '-');
+      
+      // Look for existing category at this level
+      let category = parentCategories.find(c => c.name === currentName);
+      
+      if (!category) {
+        // Create new category
+        category = {
+          id: categoryId,
+          name: currentName,
           tables: [],
-          source: 'core',
-          collapsed: false
-        });
+          source: source,
+          collapsed: false,
+          subcategories: [],
+          path: categoryPath
+        };
+        parentCategories.push(category);
       }
-      const category = categoryMap.get(table.category);
-      if (category) {
-        category.tables.push(table);
+      
+      // If this is a leaf category, add tables
+      if (categoryPath.length === 1) {
+        category.tables.push(...tables);
+      } else {
+        // Recurse into subcategory
+        const remainingPath = categoryPath.slice(1);
+        if (!category.subcategories) {
+          category.subcategories = [];
+        }
+        findOrCreateCategory(remainingPath, tables, source, category.subcategories);
       }
+      
+      return category;
+    };
+
+    // Process core tables (no nesting for built-in tables)
+    coreTables.forEach(table => {
+      findOrCreateCategory([table.category], [table], 'core', rootCategories);
     });
 
-    // Create a single "Magazine Tables" category if there are any
+    // Process magazine tables
     if (magazineTables.length > 0) {
-      categoryMap.set('Magazine Tables', {
-        id: 'magazine-tables',
-        name: 'Magazine Tables',
-        tables: magazineTables,
-        source: 'magazine',
-        collapsed: false
-      });
+      findOrCreateCategory(['Magazine Tables'], magazineTables, 'magazine', rootCategories);
     }
 
-    return Array.from(categoryMap.values());
+    // Process custom tables (support nested categories with "/")
+    customTables.forEach(table => {
+      const categoryPath = table.category.split('/').map(s => s.trim());
+      findOrCreateCategory(categoryPath, [table], 'core', rootCategories);
+    });
+
+    // Sort tables alphabetically within each category (recursively)
+    const sortCategoryTables = (category: TableCategory) => {
+      category.tables.sort((a, b) => a.name.localeCompare(b.name));
+      if (category.subcategories) {
+        category.subcategories.forEach(sortCategoryTables);
+      }
+    };
+    
+    rootCategories.forEach(sortCategoryTables);
+
+    this.categories = rootCategories;
   }
 
   /**
-   * Get a table by ID
+   * Get a table by ID (checks both built-in and custom tables)
    */
   getTable(id: string): OracleTable | undefined {
-    return this.tableRegistry.get(id);
+    return this.builtInTables.get(id) || this.customTables.get(id);
   }
 
   /**
@@ -86,12 +170,14 @@ export class OracleEngine {
    * Search tables by name (case-insensitive)
    */
   searchTables(query: string): OracleTable[] {
+    const allTables = this.getAllTables();
+    
     if (!query || query.trim() === '') {
-      return Array.from(this.tableRegistry.values());
+      return allTables;
     }
 
     const lowerQuery = query.toLowerCase();
-    return Array.from(this.tableRegistry.values()).filter(table =>
+    return allTables.filter(table =>
       table.name.toLowerCase().includes(lowerQuery) ||
       table.category.toLowerCase().includes(lowerQuery) ||
       (table.description && table.description.toLowerCase().includes(lowerQuery))
@@ -102,13 +188,32 @@ export class OracleEngine {
    * Filter tables by oracle type
    */
   filterByType(types: OracleType[]): OracleTable[] {
+    const allTables = this.getAllTables();
+    
     if (!types || types.length === 0) {
-      return Array.from(this.tableRegistry.values());
+      return allTables;
     }
 
-    return Array.from(this.tableRegistry.values()).filter(table =>
+    return allTables.filter(table =>
       types.includes(table.type)
     );
+  }
+
+  /**
+   * Filter tables by source (built-in vs custom)
+   */
+  filterBySource(showBuiltIn: boolean, showCustom: boolean): OracleTable[] {
+    const allTables: OracleTable[] = [];
+    
+    if (showBuiltIn) {
+      allTables.push(...Array.from(this.builtInTables.values()));
+    }
+    
+    if (showCustom) {
+      allTables.push(...Array.from(this.customTables.values()));
+    }
+    
+    return allTables;
   }
 
   /**

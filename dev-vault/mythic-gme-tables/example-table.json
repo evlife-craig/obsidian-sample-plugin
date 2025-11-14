@@ -1,0 +1,38 @@
+{
+  "id": "example-custom-oracle",
+  "name": "Example Custom Oracle",
+  "category": "Examples",
+  "type": "Standard",
+  "diceType": "d20",
+  "description": "This is an example custom oracle table",
+  "entries": [
+    {
+      "range": [
+        1,
+        5
+      ],
+      "result": "Very unlikely outcome"
+    },
+    {
+      "range": [
+        6,
+        10
+      ],
+      "result": "Unlikely outcome"
+    },
+    {
+      "range": [
+        11,
+        15
+      ],
+      "result": "Likely outcome"
+    },
+    {
+      "range": [
+        16,
+        20
+      ],
+      "result": "Very likely outcome"
+    }
+  ]
+}

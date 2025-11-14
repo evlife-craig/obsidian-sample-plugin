@@ -5,7 +5,7 @@
 import { ItemView, WorkspaceLeaf, MarkdownView } from 'obsidian';
 import { OracleEngine } from './oracleEngine';
 import { ALL_TABLES } from './tables/index';
-import { OracleType, TableCategory, FateChartOdds, FateChartParams, OracleTable, RollResult, CombinedRollResult } from './types';
+import { OracleType, TableCategory, FateChartOdds, FateChartParams, OracleTable, RollResult, CombinedRollResult, CustomOracleTable } from './types';
 import MythicGMEPlugin from '../main';
 
 export const VIEW_TYPE_ORACLE = 'mythic-gme-oracle-view';
@@ -21,6 +21,15 @@ export class OracleView extends ItemView {
     super(leaf);
     this.plugin = plugin;
     this.engine = new OracleEngine(ALL_TABLES);
+    
+    // Set engine reference on plugin for custom table loader to use
+    plugin.engine = this.engine;
+    
+    // Add custom tables to engine if loader is available
+    if (plugin.customTableLoader) {
+      const customTables = plugin.customTableLoader.getCustomTables();
+      customTables.forEach(table => this.engine.addCustomTable(table));
+    }
   }
 
   getViewType(): string {
@@ -49,6 +58,7 @@ export class OracleView extends ItemView {
     this.renderOraclesBanner();
     this.renderSearch();
     this.renderTypeFilters();
+    this.renderSourceFilters();
     this.renderCategories();
   }
 
@@ -64,6 +74,14 @@ export class OracleView extends ItemView {
    * Refresh the view (called when settings change)
    */
   refresh(): void {
+    // Rebuild engine with current custom tables
+    this.engine = new OracleEngine(ALL_TABLES);
+    
+    if (this.plugin.customTableLoader) {
+      const customTables = this.plugin.customTableLoader.getCustomTables();
+      customTables.forEach(table => this.engine.addCustomTable(table));
+    }
+    
     this.renderCategories();
   }
 
@@ -197,7 +215,12 @@ export class OracleView extends ItemView {
       filterContainer.empty();
     }
     
-    filterContainer.createSpan({ text: 'Filter: ', cls: 'filter-label' });
+    // Check if type filters should be disabled (only custom tables shown)
+    const typeFiltersDisabled = !this.plugin.settings.showBuiltInTables && this.plugin.settings.showCustomTables;
+    
+    // Add label with context
+    const labelText = typeFiltersDisabled ? 'Type (Built-in only): ' : 'Type: ';
+    filterContainer.createSpan({ text: labelText, cls: 'filter-label' });
     
     const filterTypes = [
       { type: null, label: 'All' },
@@ -222,10 +245,78 @@ export class OracleView extends ItemView {
         button.addClass('active');
       }
 
-      button.addEventListener('click', () => {
-        this.handleTypeFilter(type);
-      });
+      // Disable button if only custom tables are shown
+      if (typeFiltersDisabled) {
+        button.addClass('disabled');
+        button.disabled = true;
+        button.setAttribute('title', 'Type filters only apply to built-in tables');
+      } else {
+        button.addEventListener('click', () => {
+          this.handleTypeFilter(type);
+        });
+      }
     });
+  }
+
+  /**
+   * Render source filter controls (built-in vs custom)
+   */
+  private renderSourceFilters(): void {
+    // Find or create source filter container
+    let sourceFilterContainer = this.containerContent.querySelector('.oracle-source-filter-container') as HTMLElement;
+    
+    if (!sourceFilterContainer) {
+      sourceFilterContainer = this.containerContent.createDiv({ cls: 'oracle-source-filter-container' });
+    } else {
+      sourceFilterContainer.empty();
+    }
+    
+    sourceFilterContainer.createSpan({ text: 'Source: ', cls: 'filter-label' });
+    
+    // Built-in tables button
+    const builtInButton = sourceFilterContainer.createEl('button', {
+      text: 'Built-in',
+      cls: 'oracle-filter-button'
+    });
+
+    if (this.plugin.settings.showBuiltInTables) {
+      builtInButton.addClass('active');
+    }
+
+    builtInButton.addEventListener('click', () => {
+      this.handleSourceFilter('built-in');
+    });
+
+    // Custom tables button
+    const customButton = sourceFilterContainer.createEl('button', {
+      text: 'Custom',
+      cls: 'oracle-filter-button'
+    });
+
+    if (this.plugin.settings.showCustomTables) {
+      customButton.addClass('active');
+    }
+
+    customButton.addEventListener('click', () => {
+      this.handleSourceFilter('custom');
+    });
+  }
+
+  /**
+   * Handle source filter toggle
+   */
+  private handleSourceFilter(source: 'built-in' | 'custom'): void {
+    if (source === 'built-in') {
+      this.plugin.settings.showBuiltInTables = !this.plugin.settings.showBuiltInTables;
+    } else {
+      this.plugin.settings.showCustomTables = !this.plugin.settings.showCustomTables;
+    }
+
+    // Save settings and re-render
+    this.plugin.saveSettings();
+    this.renderSourceFilters();
+    this.renderTypeFilters(); // Re-render type filters to update disabled state
+    this.renderCategories();
   }
 
   /**
@@ -317,10 +408,10 @@ export class OracleView extends ItemView {
   }
 
   /**
-   * Get filtered categories based on search and type filters
+   * Get filtered categories based on search and type filters (recursive for nested categories)
    */
   private getFilteredCategories(categories: TableCategory[]): TableCategory[] {
-    return categories.map(category => {
+    const filterCategory = (category: TableCategory): TableCategory | null => {
       // Filter tables by search query
       let filteredTables = category.tables;
 
@@ -337,24 +428,64 @@ export class OracleView extends ItemView {
         );
       }
 
-      return {
-        ...category,
-        tables: filteredTables
-      };
-    }).filter(category => category.tables.length > 0); // Only show categories with visible tables
+      // Filter by source (built-in vs custom)
+      filteredTables = filteredTables.filter(t => {
+        const customTable = t as CustomOracleTable;
+        const isCustom = customTable.source === 'custom';
+        
+        if (isCustom) {
+          return this.plugin.settings.showCustomTables;
+        } else {
+          return this.plugin.settings.showBuiltInTables;
+        }
+      });
+
+      // Recursively filter subcategories
+      let filteredSubcategories: TableCategory[] = [];
+      if (category.subcategories) {
+        filteredSubcategories = category.subcategories
+          .map(filterCategory)
+          .filter((c): c is TableCategory => c !== null);
+      }
+
+      // Only include category if it has tables or subcategories with content
+      if (filteredTables.length > 0 || filteredSubcategories.length > 0) {
+        return {
+          ...category,
+          tables: filteredTables,
+          subcategories: filteredSubcategories
+        };
+      }
+
+      return null;
+    };
+
+    return categories
+      .map(filterCategory)
+      .filter((c): c is TableCategory => c !== null);
   }
 
   /**
-   * Render a single category section
+   * Render a single category section (supports nested categories)
    */
-  private renderCategory(container: HTMLElement, category: TableCategory): void {
+  private renderCategory(container: HTMLElement, category: TableCategory, depth: number = 0): void {
     const categorySection = container.createDiv({ cls: 'oracle-category' });
+    
+    // Add depth class for nested styling
+    if (depth > 0) {
+      categorySection.addClass(`oracle-category-depth-${depth}`);
+    }
 
     // Get collapsed state from settings
     const isCollapsed = this.plugin.settings.collapsedSections[category.id] ?? false;
 
     // Category header
     const header = categorySection.createDiv({ cls: 'oracle-category-header' });
+    
+    // Add indentation for nested categories
+    if (depth > 0) {
+      header.style.paddingLeft = `${16 + (depth * 20)}px`;
+    }
     
     header.createSpan({ 
       cls: 'oracle-category-icon',
@@ -371,12 +502,22 @@ export class OracleView extends ItemView {
       this.toggleCategory(category.id);
     });
 
-    // Category content (tables)
+    // Category content (tables and subcategories)
     if (!isCollapsed) {
       const content = categorySection.createDiv({ cls: 'oracle-category-content' });
-      // Sort tables alphabetically by name
-      const sortedTables = [...category.tables].sort((a, b) => a.name.localeCompare(b.name));
-      this.renderTables(content, sortedTables, category.name);
+      
+      // Render tables in this category (already sorted by rebuildCategories)
+      if (category.tables.length > 0) {
+        this.renderTables(content, category.tables, category.name);
+      }
+      
+      // Render subcategories recursively
+      if (category.subcategories && category.subcategories.length > 0) {
+        const subcategoriesContainer = content.createDiv({ cls: 'oracle-subcategories-container' });
+        category.subcategories.forEach(subcategory => {
+          this.renderCategory(subcategoriesContainer, subcategory, depth + 1);
+        });
+      }
     }
   }
 
@@ -422,14 +563,29 @@ export class OracleView extends ItemView {
 
       const tableInfo = tableRow.createDiv({ cls: 'oracle-table-info' });
       
-      // Table name
-      tableInfo.createDiv({ 
-        cls: 'oracle-table-name',
-        text: table.name
-      });
+      // Table name with custom indicator
+      const nameContainer = tableInfo.createDiv({ cls: 'oracle-table-name' });
+      
+      // Check if this is a custom table using type guard
+      const customTable = table as CustomOracleTable;
+      const isCustomTable = customTable.source === 'custom' && customTable.filePath;
+      
+      if (isCustomTable) {
+        // Add custom table indicator icon with spacing
+        const indicator = nameContainer.createSpan({ 
+          cls: 'oracle-custom-indicator',
+          text: '📄'
+        });
+        
+        // Add tooltip with file path
+        indicator.setAttribute('aria-label', `Custom table from: ${customTable.filePath}`);
+        indicator.setAttribute('title', `Custom table from: ${customTable.filePath}`);
+      }
+      
+      nameContainer.createSpan({ text: table.name });
 
-      // Tags container (always on separate line for consistency)
-      if (this.plugin.settings.showCategoryTags) {
+      // Tags container (only for built-in tables, not custom tables)
+      if (this.plugin.settings.showCategoryTags && !isCustomTable) {
         const tagsContainer = tableInfo.createDiv({ cls: 'oracle-tags-container' });
         
         // Type tag
@@ -511,10 +667,26 @@ export class OracleView extends ItemView {
 
         const tableInfo = tableRow.createDiv({ cls: 'oracle-table-info' });
         
-        tableInfo.createSpan({ 
-          cls: 'oracle-table-name',
-          text: table.name
-        });
+        // Table name with custom indicator
+        const nameContainer = tableInfo.createSpan({ cls: 'oracle-table-name' });
+        
+        // Check if this is a custom table using type guard
+        const customTable = table as CustomOracleTable;
+        const isCustomTable = customTable.source === 'custom' && customTable.filePath;
+        
+        if (isCustomTable) {
+          // Add custom table indicator icon with spacing
+          const indicator = nameContainer.createSpan({ 
+            cls: 'oracle-custom-indicator',
+            text: '📄'
+          });
+          
+          // Add tooltip with file path
+          indicator.setAttribute('aria-label', `Custom table from: ${customTable.filePath}`);
+          indicator.setAttribute('title', `Custom table from: ${customTable.filePath}`);
+        }
+        
+        nameContainer.createSpan({ text: table.name });
 
         // Individual roll button
         const rollButton = tableRow.createEl('button', {

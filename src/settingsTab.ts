@@ -4,6 +4,8 @@
 
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import MythicGMEPlugin from '../main';
+import { ALL_TABLES } from './tables/index';
+import { ValidationError } from './types';
 
 export class MythicGMESettingTab extends PluginSettingTab {
   plugin: MythicGMEPlugin;
@@ -103,5 +105,123 @@ export class MythicGMESettingTab extends PluginSettingTab {
           this.plugin.settings.autoInsertToNote = value;
           await this.plugin.saveSettings();
         }));
+
+    // Custom Tables Section
+    containerEl.createEl('h3', { text: 'Custom Tables' });
+
+    new Setting(containerEl)
+      .setName('Tables Folder')
+      .setDesc('Folder path in your vault where custom table JSON files are stored')
+      .addText(text => text
+        .setPlaceholder('mythic-gme-tables')
+        .setValue(this.plugin.settings.customTablesFolder)
+        .onChange(async (value) => {
+          this.plugin.settings.customTablesFolder = value || 'mythic-gme-tables';
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Show Custom Tables')
+      .setDesc('Display custom tables in the oracle view')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.showCustomTables)
+        .onChange(async (value) => {
+          this.plugin.settings.showCustomTables = value;
+          await this.plugin.saveSettings();
+          this.plugin.refreshOracleView();
+        }));
+
+    new Setting(containerEl)
+      .setName('Show Built-in Tables')
+      .setDesc('Display built-in tables in the oracle view')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.showBuiltInTables)
+        .onChange(async (value) => {
+          this.plugin.settings.showBuiltInTables = value;
+          await this.plugin.saveSettings();
+          this.plugin.refreshOracleView();
+        }));
+
+    // Custom table management buttons
+    const buttonContainer = new Setting(containerEl)
+      .setName('Table Management')
+      .setDesc('Manage custom oracle tables');
+
+    buttonContainer.addButton(button => button
+      .setButtonText('Reload Custom Tables')
+      .onClick(async () => {
+        await this.plugin.reloadCustomTables();
+        this.display(); // Refresh settings display to show updated counts/errors
+      }));
+
+    buttonContainer.addButton(button => button
+      .setButtonText('Create Example Table')
+      .onClick(async () => {
+        await this.plugin.createExampleTable();
+      }));
+
+    // Display table counts
+    const customTableCount = this.plugin.customTableLoader?.getCustomTables().length || 0;
+    const builtInTableCount = this.getBuiltInTableCount();
+    
+    const countInfo = containerEl.createDiv({ cls: 'custom-tables-info' });
+    countInfo.createEl('p', { 
+      text: `Loaded Tables: ${customTableCount} custom, ${builtInTableCount} built-in`,
+      cls: 'setting-item-description'
+    });
+
+    // Display validation errors if any
+    const validationErrors = this.plugin.settings.validationErrors || [];
+    if (validationErrors.length > 0) {
+      const errorSection = containerEl.createDiv({ cls: 'custom-tables-errors' });
+      errorSection.createEl('h4', { text: `⚠ Validation Errors (${validationErrors.length})` });
+      
+      // Group errors by file
+      const errorsByFile = this.groupErrorsByFile(validationErrors);
+      
+      const errorContainer = errorSection.createDiv({ cls: 'validation-errors-container' });
+      
+      for (const [file, errors] of Object.entries(errorsByFile)) {
+        const fileErrorDiv = errorContainer.createDiv({ cls: 'file-errors' });
+        fileErrorDiv.createEl('strong', { text: `❌ ${file}` });
+        
+        const errorList = fileErrorDiv.createEl('ul', { cls: 'error-list' });
+        errors.forEach(error => {
+          const errorItem = errorList.createEl('li');
+          let errorText = error.message;
+          if (error.tableId) {
+            errorText = `Table "${error.tableId}": ${errorText}`;
+          }
+          if (error.field) {
+            errorText = `${errorText} (field: ${error.field})`;
+          }
+          errorItem.setText(errorText);
+        });
+      }
+    }
+  }
+
+  /**
+   * Get count of built-in tables
+   */
+  private getBuiltInTableCount(): number {
+    return ALL_TABLES.length;
+  }
+
+  /**
+   * Group validation errors by file
+   */
+  private groupErrorsByFile(errors: ValidationError[]): Record<string, ValidationError[]> {
+    const grouped: Record<string, ValidationError[]> = {};
+    
+    errors.forEach(error => {
+      const file = error.file || 'Unknown file';
+      if (!grouped[file]) {
+        grouped[file] = [];
+      }
+      grouped[file].push(error);
+    });
+    
+    return grouped;
   }
 }

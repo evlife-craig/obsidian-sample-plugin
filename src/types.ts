@@ -98,4 +98,54 @@ export interface TableCategory {
   tables: OracleTable[];
   source: 'core' | 'magazine';
   collapsed: boolean;
+  subcategories?: TableCategory[]; // Support for nested categories
+  path?: string[]; // Full path from root (e.g., ["Mythic Magazine", "Issue 1"])
+}
+
+/**
+ * Custom oracle table loaded from JSON file
+ */
+export interface CustomOracleTable extends OracleTable {
+  source: 'custom';
+  filePath: string;
+  loadedAt: number;
+}
+
+/**
+ * Represents a JSON file containing one or more custom tables
+ */
+export interface TableFile {
+  path: string;
+  tables: CustomOracleTable[];
+  errors: ValidationError[];
+  lastModified: number;
+}
+
+/**
+ * Validation error for custom table loading
+ */
+export interface ValidationError {
+  file: string;
+  tableId?: string;
+  field?: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+
+/**
+ * Result of validating a custom table
+ */
+export interface ValidationResult {
+  valid: boolean;
+  errors: ValidationError[];
+  table?: CustomOracleTable;
+}
+
+/**
+ * Callbacks for file watcher events
+ */
+export interface FileWatcherCallbacks {
+  onCreate: (path: string) => Promise<void>;
+  onModify: (path: string) => Promise<void>;
+  onDelete: (path: string) => Promise<void>;
 }

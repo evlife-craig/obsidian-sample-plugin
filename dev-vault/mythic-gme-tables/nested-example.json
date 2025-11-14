@@ -1,0 +1,82 @@
+[
+  {
+    "id": "mythic-magazine-issue1-oracle1",
+    "name": "Issue 1 Oracle 1",
+    "category": "Mythic Magazine/Issue 1",
+    "type": "Standard",
+    "diceType": "d20",
+    "description": "Example oracle from Issue 1",
+    "entries": [
+      {
+        "range": [1, 10],
+        "result": "First result"
+      },
+      {
+        "range": [11, 20],
+        "result": "Second result"
+      }
+    ]
+  },
+  {
+    "id": "mythic-magazine-issue1-oracle2",
+    "name": "Issue 1 Oracle 2",
+    "category": "Mythic Magazine/Issue 1",
+    "type": "Descriptor",
+    "diceType": "d20",
+    "description": "Another oracle from Issue 1",
+    "entries": [
+      {
+        "range": [1, 10],
+        "result": "Alpha"
+      },
+      {
+        "range": [11, 20],
+        "result": "Beta"
+      }
+    ]
+  },
+  {
+    "id": "mythic-magazine-issue2-oracle1",
+    "name": "Issue 2 Oracle 1",
+    "category": "Mythic Magazine/Issue 2",
+    "type": "Standard",
+    "diceType": "d20",
+    "description": "Example oracle from Issue 2",
+    "entries": [
+      {
+        "range": [1, 10],
+        "result": "Gamma"
+      },
+      {
+        "range": [11, 20],
+        "result": "Delta"
+      }
+    ]
+  },
+  {
+    "id": "homebrew-fantasy-encounters",
+    "name": "Fantasy Encounters",
+    "category": "Homebrew/Fantasy/Encounters",
+    "type": "Standard",
+    "diceType": "d20",
+    "description": "Deep nested category example",
+    "entries": [
+      {
+        "range": [1, 5],
+        "result": "Dragon"
+      },
+      {
+        "range": [6, 10],
+        "result": "Goblin"
+      },
+      {
+        "range": [11, 15],
+        "result": "Wizard"
+      },
+      {
+        "range": [16, 20],
+        "result": "Knight"
+      }
+    ]
+  }
+]
